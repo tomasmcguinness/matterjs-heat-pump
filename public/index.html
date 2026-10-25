@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Heat Pump Simulator</title>
+    <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        #fan { transform-box: view-box; transform-origin: 302px 300px; animation: spin 0.6s linear infinite; }
+        .heat-wave { animation: rise 1.8s linear infinite; }
+        .heat-wave:nth-child(2) { animation-delay: 0.6s; }
+        .heat-wave:nth-child(3) { animation-delay: 1.2s; }
+        .flow { stroke-dasharray: 6 6; animation: dash 0.8s linear infinite; }
+        .flow.return { animation-name: dash-reverse; }
+        .setpoint-display { font-size: 2.4rem; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 6ch; text-align: center; }
+        .off-label { display: none; }
+        .mode-off .off-label { display: inline; }
+    </style>
+</head>
+<body>
+<nav class="navbar bg-white mb-3">
+    <div class="container">
+        <span class="navbar-brand fw-bold text-uppercase">Heat Pump Simulator</span>
+        <span id="stateBadge" class="state-badge">Idle</span>
+    </div>
+</nav>
+
+<main class="container pb-5">
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#main" type="button" role="tab">Main</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">Settings</button></li>
+    </ul>
+
+    <div class="tab-content">
+        <section class="tab-pane fade show active" id="main" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card drawing h-100">
+                        <div class="card-body" id="device">
+                            <svg viewBox="0 0 360 400" role="img" aria-label="House heated by an air-source heat pump">
+                                <!-- House -->
+                                <rect class="paper" x="170" y="80" width="22" height="60"/>
+                                <polygon class="paper" points="16,154 130,60 244,154"/>
+                                <rect class="paper" x="34" y="154" width="192" height="206"/>
+                                <!-- Window -->
+                                <rect class="line" x="60" y="180" width="60" height="56"/>
+                                <line class="line thin" x1="90" y1="180" x2="90" y2="236"/>
+                                <line class="line thin" x1="60" y1="208" x2="120" y2="208"/>
+                                <!-- Indoor thermometer -->
+                                <rect class="line thin" x="150" y="176" width="54" height="30"/>
+                                <text id="indoorLabel" class="label" x="177" y="196" text-anchor="middle">--.-°</text>
+                                <text class="label" x="177" y="220" text-anchor="middle" style="font-size:9px">INDOOR</text>
+                                <!-- Radiator -->
+                                <rect class="paper" x="56" y="292" width="112" height="44"/>
+                                <line class="line thin" x1="70" y1="296" x2="70" y2="332"/>
+                                <line class="line thin" x1="84" y1="296" x2="84" y2="332"/>
+                                <line class="line thin" x1="98" y1="296" x2="98" y2="332"/>
+                                <line class="line thin" x1="112" y1="296" x2="112" y2="332"/>
+                                <line class="line thin" x1="126" y1="296" x2="126" y2="332"/>
+                                <line class="line thin" x1="140" y1="296" x2="140" y2="332"/>
+                                <line class="line thin" x1="154" y1="296" x2="154" y2="332"/>
+                                <!-- Heat rising from the radiator -->
+                                <g class="only-running">
+                                    <polyline class="line thin heat-wave anim" points="78,284 84,276 78,268 84,260 78,252"/>
+                                    <polyline class="line thin heat-wave anim" points="110,284 116,276 110,268 116,260 110,252"/>
+                                    <polyline class="line thin heat-wave anim" points="142,284 148,276 142,268 148,260 142,252"/>
+                                </g>
+                                <!-- Flow and return pipes through the wall to the outdoor unit -->
+                                <polyline class="line" points="168,302 236,302 236,282 262,282"/>
+                                <polyline class="line" points="168,326 246,326 246,318 262,318"/>
+                                <polyline class="line thin flow anim only-running" points="172,298 232,298 232,278 258,278"/>
+                                <polyline class="line thin flow return anim only-running" points="172,330 250,330 250,322 258,322"/>
+                                <!-- Outdoor unit -->
+                                <rect class="paper" x="262" y="250" width="82" height="110"/>
+                                <polygon class="line" points="335.3,313.8 315.8,333.3 288.2,333.3 268.7,313.8 268.7,286.2 288.2,266.7 315.8,266.7 335.3,286.2"/>
+                                <g id="fan" class="anim">
+                                    <polygon class="paper" points="303.4,296.3 330.2,289.7 331.7,304.5 305.3,302.3"/>
+                                    <polygon class="paper" points="304.5,303.1 296.8,329.5 283.3,323.4 298.4,301.7"/>
+                                    <polygon class="paper" points="298.0,300.6 279.0,280.7 291.1,272.1 302.3,296.0"/>
+                                </g>
+                                <rect class="solid" x="299" y="297" width="6" height="6"/>
+                                <line class="line thin" x1="268" y1="344" x2="338" y2="344"/>
+                                <line class="line thin" x1="268" y1="350" x2="338" y2="350"/>
+                                <!-- Outdoor temperature -->
+                                <text id="outdoorLabel" class="label" x="303" y="232" text-anchor="middle">--.-°</text>
+                                <text class="label" x="303" y="216" text-anchor="middle" style="font-size:9px">OUTDOOR</text>
+                                <text class="label off-label" x="303" y="380" text-anchor="middle">OFF</text>
+                                <!-- Ground -->
+                                <line class="line" x1="4" y1="360" x2="356" y2="360"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header">Controls</div>
+                        <div class="card-body">
+                            <div class="row g-4">
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="heatOn">
+                                        <label class="form-check-label" for="heatOn">Heating on</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="meta-label mb-1">Thermostat setpoint</div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <button id="setpointDown" class="btn btn-outline-dark" aria-label="Lower setpoint">−</button>
+                                        <div id="setpoint" class="setpoint-display">--.-°C</div>
+                                        <button id="setpointUp" class="btn btn-outline-dark" aria-label="Raise setpoint">+</button>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label d-flex justify-content-between" for="outdoor"><span>Outside temperature</span><span id="outdoorValue" class="fw-semibold">–</span></label>
+                                    <input id="outdoor" type="range" class="form-range" min="-15" max="20" step="0.5">
+                                    <div class="d-flex justify-content-between small text-body-secondary"><span>−15 °C</span><span>20 °C</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">Status</div>
+                        <div class="card-body">
+                            <div class="row g-3 readout">
+                                <div class="col-6 col-md-4"><div class="meta-label">Compressor</div><div id="compressor" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Indoor</div><div id="indoor" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">COP</div><div id="cop" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Electrical power</div><div id="power" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Heat output</div><div id="heat" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Steady-state draw</div><div id="steady" class="meta-value">–</div></div>
+                                <div class="col-6 col-md-4"><div class="meta-label">Energy total</div><div id="energy" class="meta-value">–</div></div>
+                                <div class="col-12 col-md-8"><div class="meta-label">Last event</div><div id="message" class="meta-value">–</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">DEM forecast (next 24 h)</div>
+                        <div class="card-body">
+                            <div id="forecastChart"></div>
+                            <div id="forecastMeta" class="row g-3 mt-1 readout"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tab-pane fade" id="settings" role="tabpanel"></section>
+    </div>
+</main>
+<div id="toasts"></div>
+
+<script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
